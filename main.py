@@ -1,6 +1,11 @@
 
 from urllib.request import urlopen,Request
-import os,time,shutil
+import os,time,shutil,signal
+stop=False
+
+def sig_handler(sig,frame):
+    global stop 
+    stop=True
 
 # def download_file(url,fname):
 #     url='https://www.ftserussell.com/files/support-documents/membership-russell-3000'
@@ -73,9 +78,10 @@ def main():
     init_data(stocks)
 
     print("Collecting stock prices...")
-    while True:
+    while not stop:
         start_iteration=time.time()
         for i,stock in enumerate(stocks):
+            if stop: break
             print("Number complete: %d, Ticker: %s"%(i,stock.ticker),end="\r")
             datetime=time.time()
             price=get_stock_price_yahoo(stock.ticker)
@@ -88,9 +94,10 @@ def main():
         print("Iteration complete in %d seconds"%(int(time.time())-int(start_iteration)))
 
 
-print(get_stock_price_marketwatch('GE'))
-print(get_stock_price_yahoo('GE'))
-#main()
+signal.signal(signal.SIGINT,sig_handler)
+#print(get_stock_price_marketwatch('GE'))
+#print(get_stock_price_yahoo('GE'))
+main()
 
 
 
