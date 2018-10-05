@@ -1,6 +1,7 @@
 
 from urllib.request import urlopen,Request
-import os,time,shutil,signal,pymongo
+import os,time,shutil,signal
+#import pymongo
 stop=False
 db_host='localhost'
 db_port=27017
@@ -74,6 +75,7 @@ def delete_data():
     try: shutil.rmtree('data')
     except: pass
 
+# not being used currently
 def init_db(stocks):
     client=pymongo.MongoClient(db_host,db_port)
     db=client['data']
@@ -86,21 +88,19 @@ def init_db(stocks):
         stock.db_id=collection.insert_one(obj).inserted_id
     return stocks,collection
 
-stocks=load_russell3000()
-stocks,db=init_db(stocks)
-
-
-
-
-
+#stocks=load_russell3000()
+#stocks,db=init_db(stocks)
 
 def main():
     stocks=load_russell3000()
     delete_data()
     init_data(stocks)
 
-    print("Collecting stock prices...")
+    print("Starting price collection...")
+    total_iterations=0
     while not stop:
+        total_iterations+=1
+        print("Iteration number: %d"%total_iterations)
         start_iteration=time.time()
         for i,stock in enumerate(stocks):
             if stop: break
@@ -108,18 +108,21 @@ def main():
             datetime=time.time()
             price=get_stock_price_yahoo(stock.ticker)
             if price==False:
-                print("\nError getting price for %s"%stock.ticker)
-            else:
-                f=open('data/%s.tsv'%stock.ticker,'a')
-                f.write("%d\t%s\n"%(datetime,price))
-                f.close()
+                print("\nFailed retrieving price data from Yahoo for %s, trying MarketWatch"%stock.ticker)
+                price=get_stock_price_marketwatch(stock.ticker)
+                if price==False:
+                    print("Total error getting price for %s"%stock.ticker)
+                    continue
+            f=open('data/%s.tsv'%stock.ticker,'a')
+            f.write("%d\t%s\n"%(datetime,price))
+            f.close()
         print("Iteration complete in %d seconds"%(int(time.time())-int(start_iteration)))
 
 
 signal.signal(signal.SIGINT,sig_handler)
 #print(get_stock_price_marketwatch('GE'))
 #print(get_stock_price_yahoo('GE'))
-# main()
+main()
 
 
 
