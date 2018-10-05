@@ -1,7 +1,9 @@
 
 from urllib.request import urlopen,Request
-import os,time,shutil,signal
+import os,time,shutil,signal,pymongo
 stop=False
+db_host='localhost'
+db_port=27017
 
 def sig_handler(sig,frame):
     global stop 
@@ -21,6 +23,7 @@ class stock:
     def __init__(self,name,ticker):
         self.name=name 
         self.ticker=ticker
+        self.db_id=None
     def __repr__(self):
         return "%s (%s)"%(self.name,self.ticker)
 
@@ -67,10 +70,29 @@ def init_data(tickers):
         f=open('data/%s.tsv'%stock.ticker,'w')
         f.write('Datetime\tPrice\n')
         f.close()
-
 def delete_data():
     try: shutil.rmtree('data')
     except: pass
+
+def init_db(stocks):
+    client=pymongo.MongoClient(db_host,db_port)
+    db=client['data']
+    collection=db['stocks']
+    for stock in stocks:
+        obj={'Company':stock.name,
+             'Ticker':stock.ticker,
+             'Price':[],
+             'Timestamp':[]}
+        stock.db_id=collection.insert_one(obj).inserted_id
+    return stocks,collection
+
+stocks=load_russell3000()
+stocks,db=init_db(stocks)
+
+
+
+
+
 
 def main():
     stocks=load_russell3000()
@@ -97,7 +119,7 @@ def main():
 signal.signal(signal.SIGINT,sig_handler)
 #print(get_stock_price_marketwatch('GE'))
 #print(get_stock_price_yahoo('GE'))
-main()
+# main()
 
 
 
