@@ -8,7 +8,8 @@ db_port=27017
 
 def sig_handler(sig,frame):
     global stop 
-    stop=True
+    resp=input("\nWould you like to quit [y/N]: ")
+    if (resp in ["Y","y","yes"]): stop=True
 
 # def download_file(url,fname):
 #     url='https://www.ftserussell.com/files/support-documents/membership-russell-3000'
@@ -75,18 +76,18 @@ def delete_data():
     try: shutil.rmtree('data')
     except: pass
 
-# not being used currently
-def init_db(stocks):
-    client=pymongo.MongoClient(db_host,db_port)
-    db=client['data']
-    collection=db['stocks']
-    for stock in stocks:
-        obj={'Company':stock.name,
-             'Ticker':stock.ticker,
-             'Price':[],
-             'Timestamp':[]}
-        stock.db_id=collection.insert_one(obj).inserted_id
-    return stocks,collection
+# # not being used currently
+# def init_db(stocks):
+#     client=pymongo.MongoClient(db_host,db_port)
+#     db=client['data']
+#     collection=db['stocks']
+#     for stock in stocks:
+#         obj={'Company':stock.name,
+#              'Ticker':stock.ticker,
+#              'Price':[],
+#              'Timestamp':[]}
+#         stock.db_id=collection.insert_one(obj).inserted_id
+#     return stocks,collection
 
 #stocks=load_russell3000()
 #stocks,db=init_db(stocks)
@@ -95,6 +96,7 @@ def main():
     stocks=load_russell3000()
     delete_data()
     init_data(stocks)
+    log=open('log.txt','w')
 
     print("Starting price collection...")
     total_iterations=0
@@ -116,6 +118,7 @@ def main():
             f=open('data/%s.tsv'%stock.ticker,'a')
             f.write("%d\t%s\n"%(datetime,price))
             f.close()
+        log.write("Iteration complete in %d seconds"%(int(time.time())-int(start_iteration)))            
         print("Iteration complete in %d seconds"%(int(time.time())-int(start_iteration)))
 
 
