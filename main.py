@@ -1,10 +1,12 @@
 
+from datetime import datetime as dt
 from urllib.request import urlopen,Request
 import os,time,shutil,signal
 #import pymongo
 stop=False
 db_host='localhost'
 db_port=27017
+log=None
 
 def sig_handler(sig,frame):
     global stop 
@@ -45,6 +47,7 @@ def load_russell3000():
     return stocks
 
 def get_stock_price_yahoo(ticker):
+    global log
     try:
         url='https://finance.yahoo.com/quote/'+ticker+'?p='+ticker+'&.tsrc=fin-srch'
         q=Request(url) 
@@ -52,10 +55,13 @@ def get_stock_price_yahoo(ticker):
         q.add_header('User-Agent','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11')
         text=urlopen(q,timeout=5).read().decode('utf-8')
         return text.split('Trsdu(0.3s) Fw(b) Fz(36px) Mb(-4px) D(ib)')[1].split(">")[1].split("<")[0]
-    except:
+    except Exception as e:
+        try: log.write(str(e)+"\n")
+        except: log.write("Couldn't write get_stock_price_yahoo error.\n")
         return False
 
 def get_stock_price_marketwatch(ticker):
+    global log
     try:
         url='https://www.marketwatch.com/investing/stock/'+ticker 
         q=Request(url) 
@@ -63,7 +69,9 @@ def get_stock_price_marketwatch(ticker):
         q.add_header('User-Agent','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11')
         text=urlopen(q,timeout=5).read().decode('utf-8')
         return text.split("h3 class=\"intraday__price")[1].split("bg-quote")[1].split(">")[1].split("<")[0]
-    except:
+    except Exception as e:
+        try: log.write(str(e)+"\n")
+        except: log.write("Couldn't write get_stock_price_marketwatch error.\n")
         return False
 
 def init_data(tickers):
@@ -93,6 +101,7 @@ def delete_data():
 #stocks,db=init_db(stocks)
 
 def main():
+    global log
     stocks=load_russell3000()
     delete_data()
     init_data(stocks)
@@ -101,8 +110,17 @@ def main():
     print("Starting price collection...")
     total_iterations=0
     while not stop:
+        print("Waiting for hour to begin...")
+        while True:
+            a=dt.now()
+            if a.minute in [0,1,2]: 
+                print("Starting iteration at %s"%str(a))
+                log.write("Starting iteration at %s\n"%str(a))
+                break
+            else: time.sleep(10)
         total_iterations+=1
-        print("Iteration number: %d"%total_iterations)
+        print("Starting iteration number: %d"%total_iterations)
+        log.write("Iteration number: %d\n"%total_iterations)
         start_iteration=time.time()
         for i,stock in enumerate(stocks):
             if stop: break
@@ -118,13 +136,11 @@ def main():
             f=open('data/%s.tsv'%stock.ticker,'a')
             f.write("%d\t%s\n"%(datetime,price))
             f.close()
-        log.write("Iteration complete in %d seconds"%(int(time.time())-int(start_iteration)))            
+        log.write("Iteration complete in %d seconds\n"%(int(time.time())-int(start_iteration)))            
         print("Iteration complete in %d seconds"%(int(time.time())-int(start_iteration)))
 
 
 signal.signal(signal.SIGINT,sig_handler)
-#print(get_stock_price_marketwatch('GE'))
-#print(get_stock_price_yahoo('GE'))
 main()
 
 
