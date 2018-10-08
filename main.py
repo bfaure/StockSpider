@@ -39,7 +39,7 @@ def load_russell3000():
     found_start=False
     for line in lines:
         items=line.split(',')
-        if found_start and len(items)==15 and items[0]!='--':
+        if found_start and len(items)>=15 and items[0]!='--':
             stocks.append(stock(items[1],items[0]))
         else:
             if items[0]=='Ticker':
